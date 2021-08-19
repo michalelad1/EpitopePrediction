@@ -9,8 +9,9 @@ try:
 except ImportError:
     NETSURF_AVAILABLE = False
 
+import os
 from Bio import SeqIO
-from numpy import char
+# from numpy import char
 from boltons import iterutils
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
@@ -47,6 +48,7 @@ def read_fasta(input_file):
     :return format is a list of dictionaries with key - sequence name and value - a list of [description, sequence]"""
     with open(input_file) as handle:
         parsed_file = SeqIO.parse(handle, "fasta")
+        print(type(parsed_file))
         records = {record.name: [record.description, str(record.seq)] for record in parsed_file.records}
 
     return records
@@ -171,21 +173,21 @@ def calculate_netsurf_properties(sequences, window, netsurf_searcher, netsurf_mo
     return results
 
 
-def calculate_accuracy(true_str, pred_str):
+def calculate_accuracy(true_cls, pred_cls):
     """
     Calculates the prediction accuracy of a single sequence
-    :param true_str a string representing the true classification (of the format 'aarnCDAArr')
-    :param pred_str a string representing the prediction of the NN (of the format 'aarnCDAArr')
-    Both strings are expected to have the same length
+    :param true_cls - np.array representing the true classification (of the format (0,0,0,1,1,0,0) where 1 means its in the epitope and 0 not)
+    :param pred_cls - np.array representing the predicted probable classification, each entry a float in the range [0,1]
+    Both vectors are expected to have the same length
+    ## Current implementation treats a float under 0.5 as 0 and above as 1. We could think of a different method if needed ##
     """
-    assert len(true_str) == len(pred_str)
+    assert len(true_cls) == len(pred_cls)
 
-    exp = char.array(true_str) # numpy char array
-    pred = char.array(pred_str) # numpy char array
-    corrects = sum(exp == pred)
+    diff = np.abs(true_cls - pred_cls)
+    corrects = sum(diff < 0.5)
 
-    return corrects / len(exp)
+    return corrects / len(diff)
 
 
 if __name__ == '__main__':
-    main("../resources/test.fasta")
+    main("..resources/test.fasta")
